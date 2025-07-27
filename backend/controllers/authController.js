@@ -1,31 +1,75 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const sendEmail = require('../utils/sendEmail'); // you'll create this utility
 
 const register = async (req, res) => {
-  const { username, password, confirmPassword } = req.body;
+  const { firstName, lastName, username, phone, email, password } = req.body;
 
-  if (!username || !password || !confirmPassword) {
+  if (!firstName || !lastName || !username || !email || !password) {
     return res.status(400).json({ message: 'All fields are required.' });
   }
 
-  if (password !== confirmPassword) {
-    return res.status(400).json({ message: 'Passwords do not match.' });
-  }
-
   try {
-    const existingUser = await User.findOne({ username });
-    if (existingUser) return res.status(400).json({ message: 'Username already exists.' });
+    const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+    if (existingUser) {
+      return res.status(400).json({ message: 'Username or email already exists.' });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ username, password: hashedPassword, name: username, });
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+
+    const newUser = new User({
+      username,
+      name: `${firstName} ${lastName}`,
+      email,
+      phone,
+      password: hashedPassword,
+      otp,
+      otpExpires,
+      emailVerified: false
+    });
+
     await newUser.save();
 
-    res.status(201).json({ message: 'Signup successful' });
+    // Simulate sending OTP email
+    await sendEmail(email, `Your OTP is: ${otp}`);
+
+    return res.status(201).json({ message: 'Verification required' });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+
+const verifyOtp = async (req, res) => {
+  const { email, otp } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+
+    if (!user || user.otp !== otp) {
+      return res.status(400).json({ message: 'Invalid OTP or email.' });
+    }
+
+    if (Date.now() > user.otpExpires) {
+      return res.status(400).json({ message: 'OTP has expired. Please register again.' });
+    }
+
+    user.emailVerified = true;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    res.status(200).json({ message: 'Email verified successfully. You can now log in.' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
 
 const login = async (req, res) => {
   const { usernameOrEmail, password } = req.body;
@@ -127,4 +171,4 @@ const getUserProfile = async (req, res) => {
 
 
 
-module.exports = { register, login, googleAuth, loginWithGoogle, getUserProfile };
+module.exports = { register, login, googleAuth, loginWithGoogle, getUserProfile, verifyOtp };
