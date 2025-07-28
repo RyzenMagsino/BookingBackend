@@ -45,16 +45,34 @@ const register = async (req, res) => {
 
 
 const verifyOtp = async (req, res) => {
+  console.log('=== [VERIFY OTP] ===');
+  console.log('Raw request body:', req.body); // 👈 ADD THIS
   const { email, otp } = req.body;
+
+  console.log('Received Email:', email);
+  console.log('Received OTP:', otp);
+
 
   try {
     const user = await User.findOne({ email });
 
-    if (!user || user.otp !== otp) {
+    if (!user) {
+      console.log('❌ No user found for email:', email);
+      return res.status(400).json({ message: 'Invalid OTP or email.' });
+    }
+
+    console.log('✅ User found.');
+    console.log('Stored OTP:', user.otp);
+    console.log('Stored OTP Expires:', new Date(user.otpExpires).toLocaleString());
+    console.log('Email Verified:', user.emailVerified);
+
+    if (user.otp !== otp) {
+      console.log('❌ OTP does not match. Expected:', user.otp, 'Got:', otp);
       return res.status(400).json({ message: 'Invalid OTP or email.' });
     }
 
     if (Date.now() > user.otpExpires) {
+      console.log('❌ OTP has expired. Now:', new Date().toLocaleString());
       return res.status(400).json({ message: 'OTP has expired. Please register again.' });
     }
 
@@ -63,12 +81,14 @@ const verifyOtp = async (req, res) => {
     user.otpExpires = undefined;
     await user.save();
 
-    res.status(200).json({ message: 'Email verified successfully. You can now log in.' });
+    console.log('✅ OTP verified successfully for:', email);
+    return res.status(200).json({ message: 'Email verified successfully. You can now log in.' });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Server error', error: err.message });
+    console.error('❌ Error verifying OTP:', err);
+    return res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
+
 
 
 const login = async (req, res) => {
@@ -89,7 +109,17 @@ const login = async (req, res) => {
     if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
 
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '2d' });
-    res.status(200).json({ message: 'Login successful', token, user: { username: user.username, email: user.email } });
+    res.status(200).json({
+  message: 'Login successful',
+  token,
+  user: {
+    username: user.username,
+    email: user.email,
+    name: user.name,
+    phone: user.phone
+  }
+});
+
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
