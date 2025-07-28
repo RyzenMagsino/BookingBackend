@@ -149,6 +149,34 @@ const googleAuth = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  const { firstName, lastName, phone } = req.body;
+
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    // Only update allowed fields
+    user.name = `${firstName} ${lastName}`;
+    user.phone = phone;
+
+    await user.save();
+
+    return res.status(200).json({
+      message: 'Profile updated successfully',
+      user: {
+        username: user.username,
+        name: user.name,
+        email: user.email, // Still included in response, not updated
+        phone: user.phone,
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+};
+
+
 // Google-based login (no password)
 const loginWithGoogle = async (req, res) => {
   const { email } = req.body;
@@ -189,7 +217,7 @@ const loginWithGoogle = async (req, res) => {
 // Get User Profile Info
 const getUserProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('username email name');
+    const user = await User.findById(req.user.id).select('username email name phone');
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
@@ -201,4 +229,4 @@ const getUserProfile = async (req, res) => {
 
 
 
-module.exports = { register, login, googleAuth, loginWithGoogle, getUserProfile, verifyOtp };
+module.exports = { register, login, googleAuth, loginWithGoogle, getUserProfile, verifyOtp, updateProfile };
