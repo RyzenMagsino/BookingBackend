@@ -11,4 +11,5 @@ router.get('/me', authenticateToken, getUserProfile);
 router.post('/verify-otp', verifyOtp);
 router.put('/update-profile', authenticateToken, updateProfile);
 
+
 module.exports = router;

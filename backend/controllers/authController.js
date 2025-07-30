@@ -1,7 +1,7 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const sendEmail = require('../utils/sendEmail'); // you'll create this utility
+const sendEmail = require('../utils/sendEmail');
 
 const register = async (req, res) => {
   const { firstName, lastName, username, phone, email, password } = req.body;
@@ -226,7 +226,6 @@ const getUserProfile = async (req, res) => {
     res.status(500).json({ message: 'Server error', error: err.message });
   }
 };
-
 
 
 module.exports = { register, login, googleAuth, loginWithGoogle, getUserProfile, verifyOtp, updateProfile };

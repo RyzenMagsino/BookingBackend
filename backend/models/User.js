@@ -8,7 +8,10 @@ const UserSchema = new mongoose.Schema({
   phone: { type: String },
   emailVerified: { type: Boolean, default: false },
   otp: { type: String },
-  otpExpires: { type: Date }
+  otpExpires: { type: Date },
+  resetOTP: String,
+resetOTPExpiry: Date,
+
 });
 
 module.exports = mongoose.model('User', UserSchema);
